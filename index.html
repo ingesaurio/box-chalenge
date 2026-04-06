@@ -3,345 +3,287 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>💰 200 Cajones - Jefferson & Carolina | Sincronía Real</title>
+  <title>💰 200 Cajones - Jefferson & Carolina</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.6.0/css/all.min.css">
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
   <style>
-    .cajon-card {
-      transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    .grid-cajones {
+      display: grid;
+      grid-template-columns: repeat(10, 1fr);
+      gap: 12px;
+      margin-top: 20px;
+    }
+    .cajon {
+      background: #1e1e2e;
+      border: 2px solid #3f3f4f;
+      border-radius: 12px;
+      padding: 12px 6px;
+      text-align: center;
       cursor: pointer;
+      transition: all 0.2s;
     }
-    .cajon-card:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 10px 20px -5px rgba(16, 185, 129, 0.3);
+    .cajon:hover {
+      transform: translateY(-2px);
+      border-color: #10b981;
     }
-    .cajon-card.checked {
+    .cajon.checked {
       background: linear-gradient(145deg, #10b981, #059669);
       border-color: #34d399;
       color: white;
-      box-shadow: 0 8px 20px rgba(16, 185, 129, 0.4);
     }
-    .cajon-card.checked .monto-text,
-    .cajon-card.checked .numero-text {
+    .cajon.checked .monto {
       color: white;
     }
-    .tabla-grid {
-      display: grid;
-      grid-template-columns: repeat(10, minmax(0, 1fr));
-      gap: 12px;
+    .cajon input {
+      width: 18px;
+      height: 18px;
+      margin-top: 8px;
+      cursor: pointer;
+      accent-color: #10b981;
     }
     @media (max-width: 768px) {
-      .tabla-grid { gap: 8px; }
-      .monto-text { font-size: 0.75rem; }
-    }
-    .check-custom {
-      accent-color: #10b981;
-      width: 22px;
-      height: 22px;
-      cursor: pointer;
-    }
-    .online-badge {
-      animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.6; }
+      .grid-cajones { gap: 6px; }
+      .cajon { padding: 8px 3px; }
+      .cajon div { font-size: 11px; }
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-zinc-900 via-zinc-950 to-black text-white min-h-screen pb-16">
+<body class="bg-zinc-950 text-white min-h-screen pb-12">
 
-  <div class="max-w-7xl mx-auto px-3 md:px-6 pt-6 md:pt-10">
-    
-    <!-- Header -->
-    <div class="text-center mb-8 md:mb-12">
-      <div class="flex items-center justify-center gap-3 mb-3">
-        <div class="h-px w-12 bg-emerald-500/60"></div>
-        <i class="fa-solid fa-heart text-emerald-400 text-2xl animate-pulse"></i>
-        <div class="h-px w-12 bg-emerald-500/60"></div>
-      </div>
-      <h1 class="text-4xl md:text-6xl font-extrabold">
-        Jefferson <span class="text-emerald-400">&</span> Carolina
-      </h1>
-      <p class="text-xl md:text-3xl font-light text-emerald-300 mt-2">🔥 200 Cajones del Sueño 🔥</p>
-      
-      <!-- Indicador de conexión en tiempo real -->
-      <div class="inline-flex items-center gap-2 mt-4 bg-black/40 backdrop-blur px-4 py-2 rounded-full">
-        <div class="w-2 h-2 bg-green-500 rounded-full online-badge"></div>
-        <span class="text-xs text-emerald-300 font-mono" id="connectionStatus">Conectado en tiempo real</span>
-        <i class="fa-solid fa-cloud-arrow-up text-emerald-400 text-xs"></i>
-      </div>
-    </div>
-
-    <!-- Estadísticas -->
-    <div class="bg-black/40 backdrop-blur-lg rounded-3xl p-6 md:p-8 mb-10 border border-emerald-500/30">
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-5">
-        <div class="text-center bg-zinc-800/40 rounded-2xl p-3">
-          <p class="text-zinc-400 text-xs uppercase font-bold"><i class="fa-solid fa-piggy-bank mr-1"></i> Ahorrado</p>
-          <p id="total" class="text-3xl md:text-5xl font-black text-emerald-400">0</p>
-          <p class="text-emerald-300 text-sm">COP · $20.1M meta</p>
-        </div>
-        <div class="text-center bg-zinc-800/40 rounded-2xl p-3">
-          <p class="text-zinc-400 text-xs uppercase font-bold"><i class="fa-solid fa-chart-line"></i> Progreso</p>
-          <div class="mt-2 h-3 bg-zinc-800 rounded-full overflow-hidden">
-            <div id="progress-bar" class="h-full bg-gradient-to-r from-emerald-400 to-teal-400 rounded-full w-0 transition-all duration-700"></div>
-          </div>
-          <p id="percent" class="text-2xl md:text-4xl font-black text-emerald-400 mt-2">0%</p>
-        </div>
-        <div class="text-center bg-zinc-800/40 rounded-2xl p-3">
-          <p class="text-zinc-400 text-xs uppercase font-bold"><i class="fa-regular fa-square-check"></i> Cajones</p>
-          <p id="count" class="text-3xl md:text-5xl font-black text-white">0 / 200</p>
-        </div>
-        <div class="text-center bg-zinc-800/40 rounded-2xl p-3">
-          <p class="text-zinc-400 text-xs uppercase font-bold"><i class="fa-solid fa-clock"></i> Por ahorrar</p>
-          <p id="remaining" class="text-2xl md:text-4xl font-black text-orange-400">$20.1M</p>
-        </div>
-      </div>
-    </div>
-
-    <!-- Grid de cajones 10x20 -->
-    <div class="bg-black/30 rounded-3xl p-4 md:p-8 border border-emerald-500/20">
-      <div class="flex justify-between items-center mb-4 px-2">
-        <div class="text-sm text-emerald-300"><i class="fa-solid fa-table-cells-large"></i> Tabla 10x20 (200 cajones)</div>
-        <div class="text-xs bg-emerald-900/50 px-3 py-1 rounded-full">
-          <i class="fa-regular fa-circle-check mr-1"></i> Click en cajón o checkbox
-        </div>
-      </div>
-      <div id="gridContainer" class="tabla-grid"></div>
-    </div>
-
-    <!-- Botones -->
-    <div class="flex flex-wrap gap-4 justify-center mt-12">
-      <button onclick="resetAll()" class="bg-red-900/40 hover:bg-red-700 px-7 py-3 rounded-2xl font-semibold flex items-center gap-3 transition-all">
-        <i class="fa-solid fa-arrow-rotate-left"></i> Reiniciar todo
-      </button>
-      <button onclick="exportCSV()" class="bg-emerald-700/60 hover:bg-emerald-600 px-7 py-3 rounded-2xl font-semibold flex items-center gap-3 transition-all">
-        <i class="fa-solid fa-download"></i> Exportar CSV
-      </button>
-      <button onclick="copyLink()" class="bg-indigo-800/50 hover:bg-indigo-700 px-7 py-3 rounded-2xl font-semibold flex items-center gap-3 transition-all">
-        <i class="fa-solid fa-share-nodes"></i> Copiar enlace
-      </button>
-    </div>
-    <p class="text-center text-zinc-500 text-xs mt-8">
-      ✨ Los cambios se sincronizan automáticamente entre ambos dispositivos ✨
-    </p>
+<div class="max-w-7xl mx-auto px-4 pt-8">
+  
+  <!-- Header -->
+  <div class="text-center mb-10">
+    <h1 class="text-5xl font-bold">Jefferson <span class="text-emerald-400">&</span> Carolina</h1>
+    <p class="text-2xl text-emerald-300 mt-2">🔥 200 Cajones del Sueño 🔥</p>
+    <p id="status" class="text-sm text-zinc-500 mt-2">🟢 Conectando...</p>
   </div>
 
-  <script>
-    // ========== 🔥 REEMPLAZA ESTO CON TUS CREDENCIALES DE FIREBASE 🔥 ==========
-// Import the functions you need from the SDKs you need
-import { initializeApp } from "firebase/app";
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
+  <!-- Stats -->
+  <div class="bg-zinc-900 rounded-2xl p-6 mb-8">
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+      <div>
+        <p class="text-zinc-400 text-sm">Ahorrado</p>
+        <p id="total" class="text-3xl font-bold text-emerald-400">0</p>
+      </div>
+      <div>
+        <p class="text-zinc-400 text-sm">Progreso</p>
+        <div class="h-2 bg-zinc-800 rounded-full mt-2">
+          <div id="progress-bar" class="h-full bg-emerald-500 rounded-full w-0 transition-all"></div>
+        </div>
+        <p id="percent" class="text-xl font-bold mt-1">0%</p>
+      </div>
+      <div>
+        <p class="text-zinc-400 text-sm">Cajones</p>
+        <p id="count" class="text-3xl font-bold">0/200</p>
+      </div>
+      <div>
+        <p class="text-zinc-400 text-sm">Falta</p>
+        <p id="remaining" class="text-2xl font-bold text-orange-400">0</p>
+      </div>
+    </div>
+  </div>
 
-// Your web app's Firebase configuration
-const firebaseConfig = {
-  apiKey: "AIzaSyD8zI7fsuPDpOBZ8BnzIRNhUz69dxM1AMc",
-  authDomain: "box-chalenge.firebaseapp.com",
-  projectId: "box-chalenge",
-  storageBucket: "box-chalenge.firebasestorage.app",
-  messagingSenderId: "119209832804",
-  appId: "1:119209832804:web:6d33f309675b3324b54a71"
-};
+  <!-- Grid de cajones -->
+  <div class="bg-zinc-900/50 rounded-2xl p-6">
+    <div id="gridContainer" class="grid-cajones"></div>
+  </div>
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-    };
-    // =========================================================================
+  <!-- Botones -->
+  <div class="flex gap-4 justify-center mt-8">
+    <button onclick="resetAll()" class="bg-red-800/50 hover:bg-red-700 px-6 py-3 rounded-xl transition-all">
+      <i class="fas fa-trash"></i> Reiniciar
+    </button>
+    <button onclick="exportCSV()" class="bg-emerald-700/50 hover:bg-emerald-600 px-6 py-3 rounded-xl transition-all">
+      <i class="fas fa-download"></i> Exportar CSV
+    </button>
+  </div>
+</div>
 
-    // Inicializar Firebase
-    let database, dbRef;
-    try {
-      if (!firebase.apps.length) {
-        firebase.initializeApp(firebaseConfig);
-      }
-      database = firebase.database();
-      dbRef = database.ref('cajones_200/checked');
-      console.log('✅ Firebase conectado - Sincronización en tiempo real activa');
-      document.getElementById('connectionStatus').innerHTML = '🟢 Sincronizado en vivo';
-    } catch (e) {
-      console.error('❌ Error conectando Firebase:', e);
-      document.getElementById('connectionStatus').innerHTML = '⚠️ Modo local (sin sincronización)';
+<script>
+  // ========== 🔥 TU CONFIGURACIÓN CORRECTA (con databaseURL agregada) 🔥 ==========
+  const firebaseConfig = {
+    apiKey: "AIzaSyD8zI7fsuPDpOBZ8BnzIRNhUz69dxM1AMc",
+    authDomain: "box-chalenge.firebaseapp.com",
+    databaseURL: "https://box-chalenge-default-rtdb.firebaseio.com",  // ← ESTA ES LA LÍNEA QUE FALTABA
+    projectId: "box-chalenge",
+    storageBucket: "box-chalenge.firebasestorage.app",
+    messagingSenderId: "119209832804",
+    appId: "1:119209832804:web:6d33f309675b3324b54a71"
+  };
+  // =============================================================================
+
+  // Inicializar Firebase (UNA SOLA VEZ, sin imports raros)
+  let database = null;
+  
+  try {
+    // Inicializar solo si no está ya inicializado
+    if (!firebase.apps.length) {
+      firebase.initializeApp(firebaseConfig);
     }
+    database = firebase.database();
+    console.log('✅ Firebase conectado correctamente');
+    document.getElementById('status').innerHTML = '✅ Sincronizado en vivo';
+    document.getElementById('status').className = 'text-emerald-400 text-sm';
+  } catch (e) {
+    console.error('❌ Error:', e);
+    document.getElementById('status').innerHTML = '⚠️ Modo local';
+    document.getElementById('status').className = 'text-yellow-400 text-sm';
+  }
 
-    // Variables globales
-    const TOTAL_GOAL = 20100000;
-    let checkedSet = new Set();
-    let gridElements = new Map();
+  let checkedSet = new Set();
+  const TOTAL_GOAL = 20100000;
 
-    // Guardar en Firebase
-    function syncToFirebase() {
-      if (database) {
-        const dataArray = Array.from(checkedSet);
-        dbRef.set(dataArray).catch(err => console.error('Error guardando:', err));
-      }
-      localStorage.setItem('cajones200_backup', JSON.stringify(Array.from(checkedSet)));
-    }
-
-    // Cargar desde Firebase
-    async function loadFromFirebase() {
-      if (!database) {
-        fallbackToLocal();
-        updateUI();
-        return;
-      }
+  // Crear los 200 cajones
+  function crearCajones() {
+    const container = document.getElementById('gridContainer');
+    container.innerHTML = '';
+    
+    for (let i = 1; i <= 200; i++) {
+      const monto = i * 1000;
+      const div = document.createElement('div');
+      div.className = 'cajon';
       
-      try {
-        const snapshot = await dbRef.once('value');
-        const data = snapshot.val();
-        if (data && Array.isArray(data)) {
-          checkedSet = new Set(data);
+      div.innerHTML = `
+        <div class="text-xs text-zinc-400">#${i}</div>
+        <div class="monto font-bold text-emerald-400 text-sm">$${monto.toLocaleString('es-CO')}</div>
+        <input type="checkbox" class="check-cajon">
+      `;
+      
+      const checkbox = div.querySelector('.check-cajon');
+      
+      checkbox.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (checkbox.checked) {
+          checkedSet.add(i);
         } else {
-          const localBackup = localStorage.getItem('cajones200_backup');
-          if (localBackup) {
-            checkedSet = new Set(JSON.parse(localBackup));
-            syncToFirebase();
-          }
+          checkedSet.delete(i);
         }
-      } catch (error) {
-        console.error('Error cargando:', error);
-        fallbackToLocal();
-      }
-      updateUI();
-    }
-
-    function fallbackToLocal() {
-      const saved = localStorage.getItem('cajones200_backup');
-      checkedSet = saved ? new Set(JSON.parse(saved)) : new Set();
-    }
-
-    // Escuchar cambios en tiempo real (MAGIA: ambos ven lo mismo)
-    function listenRealtime() {
-      if (!database) return;
-      dbRef.on('value', (snapshot) => {
-        const data = snapshot.val();
-        if (data && Array.isArray(data)) {
-          const newSet = new Set(data);
-          // Solo actualizar si hay cambios reales
-          if (newSet.size !== checkedSet.size || !Array.from(newSet).every(x => checkedSet.has(x))) {
-            checkedSet = newSet;
-            updateUI();
-            // Pequeña vibración visual
-            const total = calculateTotal();
-            if (total > 0) {
-              const progressBar = document.getElementById('progress-bar');
-              progressBar.style.transform = 'scaleX(1.01)';
-              setTimeout(() => progressBar.style.transform = '', 300);
-            }
-          }
-        }
+        guardarYActualizar();
       });
-    }
-
-    function calculateTotal() {
-      let total = 0;
-      checkedSet.forEach(num => total += num * 1000);
-      return total;
-    }
-
-    function updateUI() {
-      const total = calculateTotal();
-      const percent = Math.min(100, Math.round((total / TOTAL_GOAL) * 100));
-      const count = checkedSet.size;
-      const remaining = TOTAL_GOAL - total;
       
-      document.getElementById('total').innerHTML = total.toLocaleString('es-CO');
-      document.getElementById('percent').innerHTML = percent + '%';
-      document.getElementById('count').innerHTML = `${count} / 200`;
-      document.getElementById('remaining').innerHTML = remaining.toLocaleString('es-CO');
-      document.getElementById('progress-bar').style.width = percent + '%';
-      
-      // Actualizar cada cajón visualmente
-      for (let i = 1; i <= 200; i++) {
-        const div = gridElements.get(i);
-        if (!div) continue;
-        const isChecked = checkedSet.has(i);
-        const checkbox = div.querySelector('.check-custom');
-        if (checkbox) checkbox.checked = isChecked;
-        
-        if (isChecked) {
-          div.classList.add('checked');
+      div.addEventListener('click', () => {
+        checkbox.checked = !checkbox.checked;
+        if (checkbox.checked) {
+          checkedSet.add(i);
         } else {
-          div.classList.remove('checked');
+          checkedSet.delete(i);
+        }
+        guardarYActualizar();
+      });
+      
+      container.appendChild(div);
+    }
+    console.log('✅ 200 cajones creados');
+    actualizarUI();
+  }
+
+  function guardarYActualizar() {
+    // Guardar en Firebase si está disponible
+    if (database) {
+      database.ref('cajones200').set(Array.from(checkedSet))
+        .then(() => console.log('✅ Guardado en Firebase'))
+        .catch(err => console.error('Error guardando:', err));
+    }
+    // Backup local
+    localStorage.setItem('cajones_backup', JSON.stringify(Array.from(checkedSet)));
+    actualizarUI();
+  }
+
+  function actualizarUI() {
+    const total = Array.from(checkedSet).reduce((sum, num) => sum + (num * 1000), 0);
+    const percent = (total / TOTAL_GOAL) * 100;
+    const count = checkedSet.size;
+    
+    document.getElementById('total').textContent = total.toLocaleString('es-CO');
+    document.getElementById('percent').textContent = Math.round(percent) + '%';
+    document.getElementById('count').textContent = `${count}/200`;
+    document.getElementById('remaining').textContent = (TOTAL_GOAL - total).toLocaleString('es-CO');
+    document.getElementById('progress-bar').style.width = percent + '%';
+    
+    // Actualizar visual de cada cajón
+    document.querySelectorAll('.cajon').forEach((div, idx) => {
+      const num = idx + 1;
+      if (checkedSet.has(num)) {
+        div.classList.add('checked');
+        div.querySelector('.check-cajon').checked = true;
+      } else {
+        div.classList.remove('checked');
+        div.querySelector('.check-cajon').checked = false;
+      }
+    });
+  }
+
+  async function cargarDatos() {
+    if (!database) {
+      // Sin Firebase, cargar desde localStorage
+      const local = localStorage.getItem('cajones_backup');
+      if (local) {
+        checkedSet = new Set(JSON.parse(local));
+        actualizarUI();
+      }
+      return;
+    }
+    
+    try {
+      const snapshot = await database.ref('cajones200').once('value');
+      const data = snapshot.val();
+      if (data && Array.isArray(data)) {
+        checkedSet = new Set(data);
+      } else {
+        const local = localStorage.getItem('cajones_backup');
+        if (local) {
+          checkedSet = new Set(JSON.parse(local));
+          guardarYActualizar(); // subir a Firebase
         }
       }
+      actualizarUI();
+    } catch (e) {
+      console.error('Error cargando:', e);
+      const local = localStorage.getItem('cajones_backup');
+      if (local) checkedSet = new Set(JSON.parse(local));
+      actualizarUI();
     }
+  }
 
-    function toggleCajon(numero) {
-      if (checkedSet.has(numero)) {
-        checkedSet.delete(numero);
-      } else {
-        checkedSet.add(numero);
+  function escucharCambios() {
+    if (!database) return;
+    database.ref('cajones200').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (data && Array.isArray(data)) {
+        checkedSet = new Set(data);
+        actualizarUI();
       }
-      syncToFirebase();
-      updateUI();
+    });
+  }
+
+  function resetAll() {
+    if (confirm('¿Reiniciar todo el progreso? Esta acción afectará ambos dispositivos')) {
+      checkedSet.clear();
+      guardarYActualizar();
     }
+  }
 
-    // Construir grid 10x20
-    function buildGrid() {
-      const container = document.getElementById('gridContainer');
-      container.innerHTML = '';
-      gridElements.clear();
-      
-      for (let i = 1; i <= 200; i++) {
-        const monto = i * 1000;
-        const div = document.createElement('div');
-        div.className = `cajon-card bg-zinc-800/90 border-2 border-zinc-700 rounded-2xl p-2 md:p-3 flex flex-col items-center justify-between transition-all`;
-        
-        div.innerHTML = `
-          <div class="numero-text text-xs font-bold text-zinc-400 mb-1">#${i}</div>
-          <div class="monto-text text-emerald-300 text-sm md:text-base font-extrabold">$${monto.toLocaleString('es-CO')}</div>
-          <input type="checkbox" class="check-custom mt-2 w-5 h-5 md:w-6 md:h-6 cursor-pointer">
-        `;
-        
-        const checkbox = div.querySelector('.check-custom');
-        checkbox.addEventListener('click', (e) => {
-          e.stopPropagation();
-          toggleCajon(i);
-        });
-        
-        div.addEventListener('click', (e) => {
-          if (e.target !== checkbox) toggleCajon(i);
-        });
-        
-        container.appendChild(div);
-        gridElements.set(i, div);
-      }
-      updateUI();
+  function exportCSV() {
+    let csv = "Cajon,Monto_COP,Cumplido\n";
+    for (let i = 1; i <= 200; i++) {
+      csv += `${i},${i * 1000},${checkedSet.has(i) ? 'Si' : 'No'}\n`;
     }
+    const blob = new Blob(["\uFEFF" + csv], {type: 'text/csv;charset=utf-8'});
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `ahorro_cajones_${new Date().toISOString().split('T')[0]}.csv`;
+    link.click();
+  }
 
-    // Utilidades
-    window.resetAll = function() {
-      if (confirm('⚠️ ¿REINICIAR todo el progreso? Esto afectará ambos dispositivos ⚠️')) {
-        checkedSet.clear();
-        syncToFirebase();
-        updateUI();
-      }
-    };
-    
-    window.exportCSV = function() {
-      let csv = "Cajon,Monto_COP,Cumplido\n";
-      for (let i = 1; i <= 200; i++) {
-        csv += `${i},${i * 1000},${checkedSet.has(i) ? 'Si' : 'No'}\n`;
-      }
-      const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8' });
-      const link = document.createElement('a');
-      link.href = URL.createObjectURL(blob);
-      link.download = `ahorro_cajones_${new Date().toISOString().split('T')[0]}.csv`;
-      link.click();
-      URL.revokeObjectURL(link.href);
-    };
-    
-    window.copyLink = function() {
-      navigator.clipboard.writeText(window.location.href);
-      alert('✅ Enlace copiado! Compártelo con Carolina ❤️');
-    };
-    
-    // Inicializar
-    buildGrid();
-    loadFromFirebase().then(() => listenRealtime());
-  </script>
+  window.resetAll = resetAll;
+  window.exportCSV = exportCSV;
+
+  // Iniciar
+  crearCajones();
+  cargarDatos().then(() => escucharCambios());
+</script>
 </body>
 </html>
